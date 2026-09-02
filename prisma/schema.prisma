@@ -1,0 +1,315 @@
+// Algeria Green — الجزائر خضراء
+// PostgreSQL schema. No demo data: only reference tables are seeded.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+// ---------------------------------------------------------------- enums
+
+enum Role {
+  USER
+  MODERATOR
+  ASSOCIATION
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum CampaignStatus {
+  DRAFT
+  UPCOMING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum ParticipantStatus {
+  REGISTERED
+  ATTENDED
+  CANCELLED
+}
+
+enum TreeStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  ARCHIVED
+}
+
+enum ReviewAction {
+  APPROVED
+  REJECTED
+  CORRECTION_REQUESTED
+}
+
+enum NotificationType {
+  CAMPAIGN_JOINED
+  CAMPAIGN_UPDATED
+  CAMPAIGN_CANCELLED
+  CAMPAIGN_REMINDER
+  ATTENDANCE_RECORDED
+  TREE_SUBMITTED
+  TREE_APPROVED
+  TREE_REJECTED
+  TREE_CORRECTION_REQUESTED
+  ACCOUNT_SUSPENDED
+  ACCOUNT_REACTIVATED
+  ROLE_CHANGED
+}
+
+enum TokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+// ---------------------------------------------------------------- reference data
+
+model Wilaya {
+  id     Int    @id
+  code   String @unique @db.VarChar(4)
+  nameAr String
+  nameFr String
+  nameEn String
+
+  users     User[]
+  campaigns Campaign[]
+  trees     Tree[]
+
+  @@index([code])
+}
+
+model TreeSpecies {
+  id     Int     @id @default(autoincrement())
+  slug   String  @unique
+  nameAr String
+  nameFr String
+  nameEn String
+  latin  String?
+  active Boolean @default(true)
+
+  trees Tree[]
+}
+
+// ---------------------------------------------------------------- identity
+
+model User {
+  id            String     @id @default(cuid())
+  email         String     @unique
+  emailVerified DateTime?
+  passwordHash  String
+  name          String
+  avatarUrl     String?
+  wilayaId      Int?
+  role          Role       @default(USER)
+  status        UserStatus @default(ACTIVE)
+  locale        String     @default("ar") @db.VarChar(5)
+  publicProfile Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  wilaya        Wilaya?             @relation(fields: [wilayaId], references: [id], onDelete: SetNull)
+  sessions      Session[]
+  tokens        VerificationToken[]
+  trees         Tree[]
+  participation CampaignParticipant[]
+  notifications Notification[]
+
+  createdCampaigns Campaign[]         @relation("CampaignCreator")
+  reviewedTrees    Tree[]             @relation("TreeReviewer")
+  reviews          TreeVerification[] @relation("VerificationReviewer")
+  auditLogs        AuditLog[]         @relation("AuditActor")
+
+  @@index([role])
+  @@index([status])
+  @@index([wilayaId])
+  @@index([createdAt])
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  ip        String?
+  userAgent String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model VerificationToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  type      TokenType
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@index([expiresAt])
+}
+
+model RateLimit {
+  key     String   @id
+  count   Int      @default(0)
+  resetAt DateTime
+
+  @@index([resetAt])
+}
+
+// ---------------------------------------------------------------- domain
+
+model Campaign {
+  id              String         @id @default(cuid())
+  slug            String         @unique
+  title           String
+  description     String         @db.Text
+  coverImageUrl   String?
+  wilayaId        Int
+  commune         String
+  locationLabel   String?
+  latitude        Float?
+  longitude       Float?
+  date            DateTime       @db.Date
+  startTime       String?        @db.VarChar(5)
+  endTime         String?        @db.VarChar(5)
+  targetTrees     Int
+  maxParticipants Int?
+  status          CampaignStatus @default(DRAFT)
+  organizerName   String
+  attendanceToken String         @unique
+  createdById     String
+  publishedAt     DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  wilaya       Wilaya                @relation(fields: [wilayaId], references: [id])
+  createdBy    User                  @relation("CampaignCreator", fields: [createdById], references: [id])
+  participants CampaignParticipant[]
+  trees        Tree[]
+
+  @@index([status])
+  @@index([wilayaId])
+  @@index([date])
+  @@index([status, date])
+}
+
+model CampaignParticipant {
+  id         String            @id @default(cuid())
+  campaignId String
+  userId     String
+  joinedAt   DateTime          @default(now())
+  status     ParticipantStatus @default(REGISTERED)
+  attendedAt DateTime?
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, userId])
+  @@index([userId])
+  @@index([campaignId])
+  @@index([status])
+}
+
+model Tree {
+  id              String     @id @default(cuid())
+  publicId        String     @unique
+  userId          String
+  campaignId      String?
+  speciesId       Int?
+  speciesOther    String?
+  plantingDate    DateTime   @db.Date
+  wilayaId        Int
+  commune         String
+  latitude        Float?
+  longitude       Float?
+  publicLatitude  Float?
+  publicLongitude Float?
+  photoUrl        String?
+  notes           String?    @db.Text
+  status          TreeStatus @default(PENDING)
+  anonymous       Boolean    @default(false)
+  reviewedById    String?
+  reviewedAt      DateTime?
+  reviewReason    String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaign   Campaign?          @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  wilaya     Wilaya             @relation(fields: [wilayaId], references: [id])
+  species    TreeSpecies?       @relation(fields: [speciesId], references: [id])
+  reviewedBy User?              @relation("TreeReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviews    TreeVerification[]
+
+  @@index([status])
+  @@index([wilayaId])
+  @@index([campaignId])
+  @@index([userId])
+  @@index([status, wilayaId])
+  @@index([status, plantingDate])
+  @@index([createdAt])
+}
+
+model TreeVerification {
+  id         String       @id @default(cuid())
+  treeId     String
+  reviewerId String
+  action     ReviewAction
+  reason     String?
+  createdAt  DateTime     @default(now())
+
+  tree     Tree @relation(fields: [treeId], references: [id], onDelete: Cascade)
+  reviewer User @relation("VerificationReviewer", fields: [reviewerId], references: [id])
+
+  @@index([treeId])
+  @@index([reviewerId])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  data      Json             @default("{}")
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json     @default("{}")
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  actor User? @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
