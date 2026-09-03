@@ -1,0 +1,23 @@
+# Local PostgreSQL for development. Production uses a managed database.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: dzgreen-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: dzgreen
+      POSTGRES_PASSWORD: dzgreen_dev_pw
+      POSTGRES_DB: dzgreen
+    ports:
+      # 5434 on the host keeps out of the way of any local Postgres on 5432.
+      - "5434:5432"
+    volumes:
+      - dzgreen-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dzgreen -d dzgreen"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  dzgreen-postgres:
