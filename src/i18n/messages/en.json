@@ -23,6 +23,9 @@
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
     "language": "Language",
+    "theme": "Theme",
+    "themeLight": "Switch to the light theme",
+    "themeDark": "Switch to the dark theme",
     "notifications": "Notifications",
     "skipToContent": "Skip to main content"
   },

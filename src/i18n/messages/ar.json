@@ -23,6 +23,9 @@
     "openMenu": "فتح القائمة",
     "closeMenu": "إغلاق القائمة",
     "language": "اللغة",
+    "theme": "المظهر",
+    "themeLight": "التبديل إلى المظهر الفاتح",
+    "themeDark": "التبديل إلى المظهر الداكن",
     "notifications": "الإشعارات",
     "skipToContent": "تخطي إلى المحتوى الرئيسي"
   },

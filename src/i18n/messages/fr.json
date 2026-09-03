@@ -23,6 +23,9 @@
     "openMenu": "Ouvrir le menu",
     "closeMenu": "Fermer le menu",
     "language": "Langue",
+    "theme": "Thème",
+    "themeLight": "Passer au thème clair",
+    "themeDark": "Passer au thème sombre",
     "notifications": "Notifications",
     "skipToContent": "Aller au contenu principal"
   },

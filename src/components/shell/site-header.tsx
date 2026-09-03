@@ -46,7 +46,11 @@ export async function SiteHeader({
 
         <div className="ms-auto flex items-center gap-1">
           <LanguageSwitcher locale={locale} label={t("nav.language")} />
-          <ThemeToggle label={t("nav.language")} />
+          <ThemeToggle
+            label={t("nav.theme")}
+            toLight={t("nav.themeLight")}
+            toDark={t("nav.themeDark")}
+          />
 
           {user ? (
             <>

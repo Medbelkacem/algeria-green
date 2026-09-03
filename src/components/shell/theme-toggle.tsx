@@ -25,7 +25,15 @@ function isDark() {
   return document.documentElement.classList.contains("dark");
 }
 
-export function ThemeToggle({ label }: { label: string }) {
+export function ThemeToggle({
+  label,
+  toLight,
+  toDark,
+}: {
+  label: string;
+  toLight: string;
+  toDark: string;
+}) {
   const dark = useSyncExternalStore(subscribe, isDark, () => false);
 
   function toggle() {
@@ -40,7 +48,15 @@ export function ThemeToggle({ label }: { label: string }) {
   }
 
   return (
-    <Button variant="ghost" size="icon" onClick={toggle} aria-label={label} aria-pressed={dark}>
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={toggle}
+      // The accessible name says what the button will do, not just its topic.
+      aria-label={dark ? toLight : toDark}
+      title={label}
+      aria-pressed={dark}
+    >
       {dark ? <Sun /> : <Moon />}
     </Button>
   );
