@@ -16,8 +16,9 @@ test("the root redirects into a locale and renders the Arabic hero", async ({ pa
 
 test("statistics come from the database and read zero while it is empty", async ({ page }) => {
   await page.goto("/en");
-  const statCard = page.locator("main").locator("div", { hasText: /^0verified trees$/ }).first();
+  const statCard = page.locator("main dl").filter({ hasText: "verified trees" }).first();
   await expect(statCard).toBeVisible();
+  await expect(statCard.locator("dd")).toHaveText("0");
   await expect(page.getByText("Only verified trees are counted.")).toBeVisible();
 });
 
