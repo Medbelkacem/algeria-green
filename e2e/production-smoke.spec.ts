@@ -19,7 +19,7 @@ test("statistics come from the database and read zero while it is empty", async 
   const statCard = page.locator("main dl").filter({ hasText: "verified trees" }).first();
   await expect(statCard).toBeVisible();
   await expect(statCard.locator("dd")).toHaveText("0");
-  await expect(page.getByText("Only verified trees are counted.")).toBeVisible();
+  await expect(page.getByText("Only verified trees are counted.", { exact: true })).toBeVisible();
 });
 
 test("empty states are shown instead of invented content", async ({ page }) => {

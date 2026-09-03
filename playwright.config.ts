@@ -17,6 +17,9 @@ const E2E_DATABASE_URL =
 
 export default defineConfig({
   testDir: "./e2e",
+  // The production smoke suite runs against a live deployment; it has its own
+  // config and asserts on an empty database, which the local run does not have.
+  testIgnore: /production-smoke\.spec\.ts/,
   fullyParallel: false,
   workers: 1,
   retries: process.env.CI ? 1 : 0,
@@ -37,7 +40,7 @@ export default defineConfig({
       // The full authoring-to-verification journey runs once, on desktop.
       name: "desktop-chromium",
       use: { ...devices["Desktop Chrome"] },
-      testIgnore: /responsive\.spec\.ts/,
+      testMatch: /critical-flow\.spec\.ts/,
     },
     {
       // Handheld run covers the mobile-specific surface: tab bar, layout and PWA.
